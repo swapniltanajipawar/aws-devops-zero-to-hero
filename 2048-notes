@@ -1,0 +1,93 @@
+2048 game application:
+
+ingress alb controller-->ingress resource -->service-->deployment-->namespace. 
+ALB controller created the loadbalancer in order to function created IAM OIDC,created new policy attach policy to that role in order to communicate with AWS services. 
+Used helm to install and deploy ALB controller where finally verifying the deployment has created 2/2 pods and in ingress also created lb Address where I successfully able to access game-2048 app. 
+the errors which I faced this my awscli and kubectl was not compatible hence I updated those and I changed my config inside .kube folder from alpha1 to beta1 by googling where I rectified these errors
+finally able to deploy the application using EKS along with fargate. 
+
+https://www.youtube.com/redirect?event=video_description&redir_token=QUFFLUhqbENXR1pqZUJBX2NpenBHUWFNb3NwRDF1VXRqZ3xBQ3Jtc0ttelJqMk9Td1RGYWM4STRXaEN3NE1mNkJ5UVNZTFBGeGhYcFgzSHpYLVBkSkwwS1VyRk9rdlVjR1pFQlRZWVcycnktZHRXLVAyTU9CR3kxa2pleWJOUDZmeS0zMEI2QmIwU2k1R1JsQV9JZ09UcUtkSQ&q=https%3A%2F%2Fgithub.com%2Fiam-veeramalla%2Faws-devops-zero-to-hero%2Ftree%2Fmain%2Fday-22&v=RRCrY12VY_s
+=====
+1) Pre-requisites:
+Before starting, you need to install the following tools:
+kubectl: Command line tool for interacting with Kubernetes clusters.
+eksctl: Command line tool for creating and managing EKS clusters.
+AWS CLI: Command line tool to interact with AWS services.
+aws configure: Set up your AWS credentials (Access key and Secret key).
+
+2)EKS cluster:You create a new EKS cluster with the following command:
+eksctl create cluster --name demo-cluster --region us-east-1 --fargate
+This command creates an EKS cluster named "demo-cluster" in the us-east-1 region using Fargate, 
+which is a serverless compute engine.
+
+3)To run Local commands of kubectl to cloud EKS cluster:
+aws eks update-kubeconfig --name demo-cluster --region us-east-1 
+
+4)Create Fargate profile: Fargate profile enables EKS to run workloads on Fargate:
+This command creates a profile named "alb-sample-app" in the "game-2048" namespace.
+
+eksctl create fargateprofile \
+    --cluster demo-cluster \
+    --region us-east-1 \
+    --name alb-sample-app \
+    --namespace game-2048
+
+5)Deploy the deployment, service and Ingress:
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.5.4/docs/examples/2048/2048_full.yaml
+ingress alb controller-->ingress resource -->service-->deployment-->namespace
+This deploys the necessary resources like deployment, service, ingress, and namespace for the application.
+
+6)Checking the pods and ingress controller and its targets:
+kubectl get pods -n game-2048 -w
+kubectl get svc -n game-2048 -w
+kubectl get ingress -n game-2048
+	
+7)commands to configure IAM OIDC provider: To provide aws services access to pods containing appliaction. 
+ALb controller kube pod -> talk to aws resource need an IAM integrated -> IAM OIDC provider we given:
+eksctl utils associate-iam-oidc-provider --cluster $cluster_name --approve
+
+8)Download IAM policy: To give the ALB controller the necessary permissions, download the IAM policy:
+curl -O https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.5.4/docs/install/iam_policy.json
+ALB controllerm-> pod -> access to aws service such as ALB. We need an IAM policy.
+
+kubectl get pods -n game-2048 -w
+kubectl get svc -n game-2048 -w
+kubectl get ingress -n game-2048
+Ingress controller -> read this ingress-2048 -> create and configure LB with-> target group, port.
+
+Create IAM Policy:
+aws iam create-policy \
+    --policy-name AWSLoadBalancerControllerIAMPolicy \
+    --policy-document file://iam_policy.json
+
+Create IAM Role:
+eksctl create iamserviceaccount \
+  --cluster=<your-cluster-name> \
+  --namespace=kube-system \
+  --name=aws-load-balancer-controller \
+  --role-name AmazonEKSLoadBalancerControllerRole \
+  --attach-policy-arn=arn:aws:iam::<your-aws-account-id>:policy/AWSLoadBalancerControllerIAMPolicy \
+  --approve
+  
+9)Deploy ALB controller
+Add the EKS Helm repository and install the ALB controller:
+
+helm repo add eks https://aws.github.io/eks-charts
+
+Update the repo:
+helm repo update eks
+
+Install:
+helm install aws-load-balancer-controller eks/aws-load-balancer-controller \            
+  -n kube-system \
+  --set clusterName=<your-cluster-name> \
+  --set serviceAccount.create=false \
+  --set serviceAccount.name=aws-load-balancer-controller \
+  --set region=<region> \
+  --set vpcId=<your-vpc-id>
+  
+  
+10)To verify that the ALB controller deployment is running, use:
+kubectl get deployment -n kube-system aws-load-balancer-controller  
+This ensures that the ALB controller is successfully deployed and running in your cluster.
+===============================
