@@ -13,7 +13,61 @@ Before starting, you need to install the following tools:
 kubectl: Command line tool for interacting with Kubernetes clusters.
 eksctl: Command line tool for creating and managing EKS clusters.
 AWS CLI: Command line tool to interact with AWS services.
-aws configure: Set up your AWS credentials (Access key and Secret key).
+aws configure: Set up your AWS credentials (Access key and Secret key
+==================================================================================================
+1)KUBECTL:
+
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+wget https://github.com/kubernetes/kops/releases/download/v1.25.0/kops-linux-amd64
+chmod +x kops-linux-amd64 kubectl
+mv kubectl /usr/local/bin/kubectl
+mv kops-linux-amd64 /usr/local/bin/kops
+
+#vim .bashrc
+#export PATH=$PATH:/usr/local/bin/
+#source .bashrc
+==================================================================================================
+2)Install EKS:
+https://eksctl.io/installation/
+
+#To INSTALL The EKS:
+# for ARM systems, set ARCH to: `arm64`, `armv6` or `armv7`
+ARCH=amd64
+PLATFORM=$(uname -s)_$ARCH
+curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$PLATFORM.tar.gz"
+# (Optional) Verify checksum
+curl -sL "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_checksums.txt" | grep $PLATFORM | sha256sum --check
+tar -xzf eksctl_$PLATFORM.tar.gz -C /tmp && rm eksctl_$PLATFORM.tar.gz
+sudo mv /tmp/eksctl /usr/local/bin
+===================================================================================================
+3)AWS CLI:
+Step 1: Remove the Existing AWS CLI Installation
+Run the following command to remove the currently installed AWS CLI:
+sudo rm -rf /usr/local/aws-cli
+sudo rm /usr/local/bin/aws
+
+Step 2: Install the Latest AWS CLI Version
+Download the AWS CLI Installer:
+
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+Unzip the Installer:
+
+unzip awscliv2.zip
+If unzip is not installed:
+
+sudo yum install -y unzip
+Run the Installer:
+
+sudo ./aws/install
+Verify Installation:
+
+aws --version
+This should show the latest version of AWS CLI.
+
+Step 3: Clean Up
+Remove the installer files to free up space:
+rm -rf awscliv2.zip aws
+===============================================================
 
 2)EKS cluster:You create a new EKS cluster with the following command:
 eksctl create cluster --name demo-cluster --region us-east-1 --fargate
