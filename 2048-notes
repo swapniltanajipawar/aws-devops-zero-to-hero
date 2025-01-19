@@ -144,4 +144,7 @@ helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
 10)To verify that the ALB controller deployment is running, use:
 kubectl get deployment -n kube-system aws-load-balancer-controller  
 This ensures that the ALB controller is successfully deployed and running in your cluster.
+
+11)To delete the eks cluster:
+eksctl delete cluster --name demo-cluster --region us-east-1
 ===============================
